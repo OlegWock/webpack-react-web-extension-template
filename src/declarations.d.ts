@@ -3,5 +3,20 @@ declare module '@assets/*' {
     export default url;
 }
 
+declare module '*.scss' {
+    const content: string;
+    export default content;
+}
+
+declare module '*.sass' {
+    const content: string;
+    export default content;
+}
+
+declare module '*.css' {
+    const content: string;
+    export default content;
+}
+
 declare const X_MODE: 'development' | 'production';
 declare const X_BROWSER: 'chrome';

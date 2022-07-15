@@ -8,12 +8,12 @@
             "@assets/*": ["./src/assets/*"]
         },
         "outDir": "./dist/",
-        "noImplicitAny": false,
+        "noImplicitAny": true,
         "allowSyntheticDefaultImports": true,
         "strictNullChecks": true,
         "module": "es6",
         "target": "es6",
-        "jsx": "react-jsx",
+        "jsx": "preserve",
         "allowJs": true,
         "moduleResolution": "node",
         "resolveJsonModule": true

@@ -7,7 +7,7 @@ type CacheGroups = Exclude<
     undefined
 >;
 // eslint-disable-next-line @typescript-eslint/ban-types
-type CacheGroup = Exclude<CacheGroups[keyof CacheGroups], string | false | Function | RegExp>;
+export type CacheGroup = Exclude<CacheGroups[keyof CacheGroups], string | false | Function | RegExp>;
 
 type BetterCacheGroupTest =
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -27,10 +27,12 @@ export interface Chunk {
     test: BetterCacheGroupTest;
 }
 
-export const isScript = (filename: string) => ['.ts', '.tsx', '.js', '.jsx'].some((ext) => filename.endsWith(ext));
+export const scriptExtensions = ['.tsx', '.jsx', '.ts', '.js'];
+
+export const isScript = (filename: string) => scriptExtensions.some((ext) => filename.endsWith(ext));
 
 export const scriptName = (filename: string) =>
-    filename.replace('.tsx', '').replace('.jsx', '').replace('.ts', '').replace('.js', '');
+    scriptExtensions.reduce((name, extension) => name.replace(extension, ''), filename);
 
 export const joinPath = (...args: string[]) => {
     // preserve dot on start of path
@@ -88,10 +90,13 @@ export const generatePageContentForScript = (pageTemplate: string, substitutions
 };
 
 export const shouldNotBeInCommonChunk = (relativePath: string, entires: { [id: string]: string }) => {
-    console.log('shouldNotBeInCommonChunk', relativePath, Object.values(entires).includes(relativePath));
     return Object.values(entires).includes(relativePath);
 };
 
 export const generateBackgroundWorkerWrapper = (scripts: string[]) => {
     return `try { importScripts(${scripts.map((sc) => `"${sc}"`).join(', ')}); } catch (e) {console.log(e);}\n`;
+};
+
+export const isUiRelated = (name: string) => {
+    return name.includes('react') || name.includes('jquery') || name.includes('/components/');
 };

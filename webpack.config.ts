@@ -1,7 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as walkSync from 'walk-sync';
 import * as webpack from 'webpack';
 import * as TerserPlugin from 'terser-webpack-plugin';
+// @ts-ignore No declarations for this module!
 import * as GenerateFiles from 'generate-file-webpack-plugin';
 import * as CopyPlugin from 'copy-webpack-plugin';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
@@ -9,16 +11,18 @@ import * as FileManagerPlugin from 'filemanager-webpack-plugin';
 import {
     Chunk,
     createPathsObject,
-    isScript,
     joinPath,
     scriptName,
     shouldNotBeInCommonChunk,
     pathRelatedToExtRoot,
     generatePageContentForScript,
     generateBackgroundWorkerWrapper,
+    isUiRelated,
+    CacheGroup,
+    scriptExtensions,
 } from './build_helpers/webpack-utils';
 
-import { version, name, description } from './package.json';
+import { version, name, description, author } from './package.json';
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
@@ -30,16 +34,60 @@ interface WebpackEnvs {
 
 const generateManifest = (
     mode: Exclude<WebpackEnvs['mode'], undefined>,
-    targetBrowser: Exclude<WebpackEnvs['targetBrowser'], undefined>
+    targetBrowser: Exclude<WebpackEnvs['targetBrowser'], undefined>,
+    libsRoot: string,
+    commonChunks: { [name: string]: Chunk }
 ) => {
     return {
         name: name,
         description: description,
         version: version,
+        author: author,
         manifest_version: 3,
         background: {
             service_worker: 'background-wrapper.js',
         },
+        icons: {
+            '16': 'assets/images/icon16.png',
+            '32': 'assets/images/icon32.png',
+            '48': 'assets/images/icon48.png',
+            '128': 'assets/images/icon128.png',
+        },
+        action: {
+            default_icon: {
+                '16': 'assets/images/icon16.png',
+                '24': 'assets/images/icon24.png',
+                '32': 'assets/images/icon32.png',
+            },
+            default_title: 'Click me!',
+            default_popup: '/pages/popup/index.html',
+        },
+        options_ui: {
+            page: '/pages/options/index.html',
+            open_in_tab: true,
+        },
+
+        permissions: ['storage'],
+
+        host_permissions: ['*://*.example.com/*'],
+
+        content_scripts: [
+            {
+                matches: ['*://*.example.com/*'],
+                js: [
+                    ...Object.keys(commonChunks).map((name) => `${libsRoot}/${name}.js`),
+                    '/contentscripts/example.js',
+                ],
+            },
+        ],
+
+        web_accessible_resources: [
+            {
+                resources: ['/assets/*'],
+                matches: ['<all_urls>'],
+                use_dynamic_url: true,
+            },
+        ],
     };
 };
 
@@ -55,7 +103,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 const absBase = path.resolve(__dirname);
                 const relativePath = name.replace(absBase, '.').toLowerCase();
                 if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
-                return relativePath.includes('react') || relativePath.includes('jquery');
+                return isUiRelated(relativePath);
             },
         },
         other: {
@@ -65,7 +113,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 const absBase = path.resolve(__dirname);
                 const relativePath = name.replace(absBase, '.').toLowerCase();
                 if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
-                return !relativePath.includes('react') && !relativePath.includes('jquery');
+                return !isUiRelated(relativePath);
             },
         },
     } as const;
@@ -78,10 +126,10 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         encoding: 'utf-8',
     });
 
-    const entries = {
+    const entries: { [id: string]: string } = {
         backgroundScript: paths.src.background,
     };
-    const outputs = {
+    const outputs: { [id: string]: string } = {
         backgroundScript: paths.dist.background,
     };
 
@@ -89,21 +137,28 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
 
     const generateFileInvocations: GenerateFiles[] = [];
 
-    const pages = fs.readdirSync(paths.src.pages).filter(isScript);
+    const pages = walkSync(paths.src.pages, {
+        globs: scriptExtensions.map((ext) => '**/*' + ext),
+        directories: false,
+    });
+    console.log('Pages:', pages);
     pages.forEach((page) => {
         const cleanName = scriptName(page);
         entries[cleanName] = joinPath(paths.src.pages, page);
         outputs[cleanName] = joinPath(paths.dist.pages, cleanName + '.js');
 
-        const scriptsToInject = [`${cleanName}.js`, ...Object.keys(commonChunks).map((name) => `${name}.js`)];
+        const scriptsToInject = [
+            ...Object.keys(commonChunks).map((name) => `${libsRoot}/${name}.js`),
+            `/${paths.dist.pages}/${cleanName}.js`,
+        ];
 
         generateFileInvocations.push(
             new GenerateFiles({
                 file: joinPath(paths.dist.pages, `${cleanName}.html`),
                 content: generatePageContentForScript(pageTemplate, {
                     scripts: scriptsToInject
-                        .map((name) => {
-                            return `<script src="${libsRoot}/${name}"></script>`;
+                        .map((url) => {
+                            return `<script src="${url}"></script>`;
                         })
                         .join('\n'),
                 }),
@@ -112,14 +167,18 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
     });
 
     // TODO: somehow automatically inject these in generated manifest?
-    const contentscripts = fs.readdirSync(paths.src.contentscripts).filter(isScript);
+    const contentscripts = walkSync(paths.src.contentscripts, {
+        globs: scriptExtensions.map((ext) => '**/*' + ext),
+        directories: false,
+    });
+    console.log('Content scripts:', contentscripts);
     contentscripts.forEach((cs) => {
         const cleanName = scriptName(cs);
         entries[cleanName] = joinPath(paths.src.contentscripts, cs);
         outputs[cleanName] = joinPath(paths.dist.contentscripts, cleanName + '.js');
     });
 
-    const cacheGroups = {};
+    const cacheGroups: { [name: string]: CacheGroup } = {};
     Object.entries(commonChunks).forEach(([name, entry]) => {
         cacheGroups[name] = {
             ...entry,
@@ -152,6 +211,19 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         ];
     }
 
+    const babelOptions = {
+        presets: [
+            ['@babel/preset-env', {}],
+            [
+                '@babel/preset-react',
+                {
+                    runtime: 'automatic',
+                    development: mode === 'development',
+                },
+            ],
+        ],
+    };
+
     return {
         mode: mode,
         devtool: mode === 'development' ? 'inline-source-map' : false,
@@ -183,21 +255,33 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
 
         module: {
             rules: [
-                // TODO: setup ts loader to pipe files into babel loader :?
-                // TODO: setup babel loader to properly handle react and friends and transpile for older browsers
                 {
                     test: /\.(ts|tsx)$/,
                     include: path.resolve(__dirname, paths.src.base),
-                    use: ['ts-loader'],
+                    use: [
+                        {
+                            loader: 'babel-loader',
+                            options: babelOptions,
+                        },
+                        {
+                            loader: 'ts-loader',
+                        },
+                    ],
                 },
                 {
                     test: /\.(js|jsx)$/,
                     include: path.resolve(__dirname, paths.src.base),
-                    use: ['babel-loader'],
+                    use: {
+                        loader: 'babel-loader',
+                        options: babelOptions,
+                    },
                 },
                 {
                     test: /\.s[ac]ss$/i,
                     use: [
+                        {
+                            loader: 'to-string-loader',
+                        },
                         {
                             loader: 'css-loader', // translates CSS into CommonJS
                         },
@@ -208,8 +292,14 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 },
                 {
                     test: /\.css$/,
-                    resourceQuery: { not: [/raw/] },
-                    use: [{ loader: 'css-loader' }],
+                    use: [
+                        {
+                            loader: 'to-string-loader',
+                        },
+                        {
+                            loader: 'css-loader',
+                        },
+                    ],
                 },
                 // More info: https://github.com/webextension-toolbox/webextension-toolbox/blob/master/src/webpack-config.js#L128
                 // Using 'self' instead of 'window' so it will work in Service Worker context
@@ -254,7 +344,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
             }),
             new GenerateFiles({
                 file: paths.dist.manifest,
-                content: JSON.stringify(generateManifest(mode, targetBrowser), null, 4),
+                content: JSON.stringify(generateManifest(mode, targetBrowser, libsRoot, commonChunks), null, 4),
             }),
             // Part of files will be already copied by browser-runtime-geturl-loader, but not all (if you don't
             // import asset in code, it's not copied), so we need to do this with addiitonal plugin
