@@ -1,22 +1,11 @@
 {
     "compilerOptions": {
-        "lib": [
-            "es6",
-            "es2019",
-            "dom",
-            "dom.iterable"
-        ],
+        "lib": ["es6", "es2019", "dom", "dom.iterable"],
         "baseUrl": ".",
         "paths": {
-            "@utils/*": [
-                "./src/utils/*"
-            ],
-            "@components/*": [
-                "./src/components/*"
-            ],
-            "@assets/*": [
-                "./src/assets/*"
-            ]
+            "@utils/*": ["./src/utils/*"],
+            "@components/*": ["./src/components/*"],
+            "@assets/*": ["./src/assets/*"]
         },
         "outDir": "./dist/",
         "noImplicitAny": false,
