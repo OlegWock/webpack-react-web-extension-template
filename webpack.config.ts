@@ -54,12 +54,8 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 if (!name) return false;
                 const absBase = path.resolve(__dirname);
                 const relativePath = name.replace(absBase, '.').toLowerCase();
-                if (shouldNotBeInCommonChunk(relativePath, entries))
-                    return false;
-                return (
-                    relativePath.includes('react') ||
-                    relativePath.includes('jquery')
-                );
+                if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
+                return relativePath.includes('react') || relativePath.includes('jquery');
             },
         },
         other: {
@@ -68,21 +64,13 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 if (!name) return false;
                 const absBase = path.resolve(__dirname);
                 const relativePath = name.replace(absBase, '.').toLowerCase();
-                if (shouldNotBeInCommonChunk(relativePath, entries))
-                    return false;
-                return (
-                    !relativePath.includes('react') &&
-                    !relativePath.includes('jquery')
-                );
+                if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
+                return !relativePath.includes('react') && !relativePath.includes('jquery');
             },
         },
     } as const;
 
-    const {
-        mode = 'development',
-        targetBrowser = 'chrome',
-        WEBPACK_WATCH,
-    } = env;
+    const { mode = 'development', targetBrowser = 'chrome', WEBPACK_WATCH } = env;
 
     const paths = createPathsObject(baseSrc, joinPath(baseDist, targetBrowser));
 
@@ -107,10 +95,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         entries[cleanName] = joinPath(paths.src.pages, page);
         outputs[cleanName] = joinPath(paths.dist.pages, cleanName + '.js');
 
-        const scriptsToInject = [
-            `${cleanName}.js`,
-            ...Object.keys(commonChunks).map((name) => `${name}.js`),
-        ];
+        const scriptsToInject = [`${cleanName}.js`, ...Object.keys(commonChunks).map((name) => `${name}.js`)];
 
         generateFileInvocations.push(
             new GenerateFiles({
@@ -127,16 +112,11 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
     });
 
     // TODO: somehow automatically inject these in generated manifest?
-    const contentscripts = fs
-        .readdirSync(paths.src.contentscripts)
-        .filter(isScript);
+    const contentscripts = fs.readdirSync(paths.src.contentscripts).filter(isScript);
     contentscripts.forEach((cs) => {
         const cleanName = scriptName(cs);
         entries[cleanName] = joinPath(paths.src.contentscripts, cs);
-        outputs[cleanName] = joinPath(
-            paths.dist.contentscripts,
-            cleanName + '.js'
-        );
+        outputs[cleanName] = joinPath(paths.dist.contentscripts, cleanName + '.js');
     });
 
     const cacheGroups = {};
@@ -270,18 +250,11 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
             // We use wrapper to load common chunks before main script
             new GenerateFiles({
                 file: 'background-wrapper.js',
-                content: generateBackgroundWorkerWrapper([
-                    `${libsRoot}/other.js`,
-                    `background.js`,
-                ]),
+                content: generateBackgroundWorkerWrapper([`${libsRoot}/other.js`, `background.js`]),
             }),
             new GenerateFiles({
                 file: paths.dist.manifest,
-                content: JSON.stringify(
-                    generateManifest(mode, targetBrowser),
-                    null,
-                    4
-                ),
+                content: JSON.stringify(generateManifest(mode, targetBrowser), null, 4),
             }),
             // Part of files will be already copied by browser-runtime-geturl-loader, but not all (if you don't
             // import asset in code, it's not copied), so we need to do this with addiitonal plugin
@@ -291,14 +264,9 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                         from: `**`,
                         context: paths.src.assets,
                         to: ({ context, absoluteFilename }) => {
-                            const assetAbsolutePath = path.resolve(
-                                paths.src.assets
-                            );
+                            const assetAbsolutePath = path.resolve(paths.src.assets);
                             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                            return path.join(
-                                paths.dist.assets,
-                                absoluteFilename!.replace(assetAbsolutePath, '')
-                            );
+                            return path.join(paths.dist.assets, absoluteFilename!.replace(assetAbsolutePath, ''));
                         },
                     },
                 ],

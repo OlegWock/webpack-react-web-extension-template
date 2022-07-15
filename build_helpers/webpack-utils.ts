@@ -3,22 +3,14 @@ import * as webpack from 'webpack';
 
 // Webpack doesn't export this type, so let's extract it ourselfs!
 type CacheGroups = Exclude<
-    Exclude<
-        Exclude<
-            webpack.Configuration['optimization'],
-            undefined
-        >['splitChunks'],
-        undefined | false
-    >['cacheGroups'],
+    Exclude<Exclude<webpack.Configuration['optimization'], undefined>['splitChunks'], undefined | false>['cacheGroups'],
     undefined
 >;
 // eslint-disable-next-line @typescript-eslint/ban-types
-type CacheGroup = Exclude<
-    CacheGroups[keyof CacheGroups],
-    string | false | Function | RegExp
->;
-// eslint-disable-next-line @typescript-eslint/ban-types
+type CacheGroup = Exclude<CacheGroups[keyof CacheGroups], string | false | Function | RegExp>;
+
 type BetterCacheGroupTest =
+    // eslint-disable-next-line @typescript-eslint/ban-types
     | Exclude<CacheGroup['test'], Function>
     | ((
           module: webpack.Module,
@@ -35,15 +27,10 @@ export interface Chunk {
     test: BetterCacheGroupTest;
 }
 
-export const isScript = (filename: string) =>
-    ['.ts', '.tsx', '.js', '.jsx'].some((ext) => filename.endsWith(ext));
+export const isScript = (filename: string) => ['.ts', '.tsx', '.js', '.jsx'].some((ext) => filename.endsWith(ext));
 
 export const scriptName = (filename: string) =>
-    filename
-        .replace('.tsx', '')
-        .replace('.jsx', '')
-        .replace('.ts', '')
-        .replace('.js', '');
+    filename.replace('.tsx', '').replace('.jsx', '').replace('.ts', '').replace('.js', '');
 
 export const joinPath = (...args: string[]) => {
     // preserve dot on start of path
@@ -53,9 +40,7 @@ export const joinPath = (...args: string[]) => {
     return res;
 };
 
-export const pathRelatedToExtRoot = <
-    T extends keyof ReturnType<typeof createPathsObject>['dist']
->(
+export const pathRelatedToExtRoot = <T extends keyof ReturnType<typeof createPathsObject>['dist']>(
     paths: ReturnType<typeof createPathsObject>,
     prop: T
 ): string => {
@@ -93,10 +78,7 @@ export const createPathsObject = (baseSrc: string, baseDist: string) => {
     };
 };
 
-export const generatePageContentForScript = (
-    pageTemplate: string,
-    substitutions: { [key: string]: string }
-) => {
+export const generatePageContentForScript = (pageTemplate: string, substitutions: { [key: string]: string }) => {
     let result = pageTemplate;
     for (const key of Object.keys(substitutions)) {
         const value = substitutions[key];
@@ -105,20 +87,11 @@ export const generatePageContentForScript = (
     return result;
 };
 
-export const shouldNotBeInCommonChunk = (
-    relativePath: string,
-    entires: { [id: string]: string }
-) => {
-    console.log(
-        'shouldNotBeInCommonChunk',
-        relativePath,
-        Object.values(entires).includes(relativePath)
-    );
+export const shouldNotBeInCommonChunk = (relativePath: string, entires: { [id: string]: string }) => {
+    console.log('shouldNotBeInCommonChunk', relativePath, Object.values(entires).includes(relativePath));
     return Object.values(entires).includes(relativePath);
 };
 
 export const generateBackgroundWorkerWrapper = (scripts: string[]) => {
-    return `try { importScripts(${scripts
-        .map((sc) => `"${sc}"`)
-        .join(', ')}); } catch (e) {console.log(e);}\n`;
+    return `try { importScripts(${scripts.map((sc) => `"${sc}"`).join(', ')}); } catch (e) {console.log(e);}\n`;
 };
