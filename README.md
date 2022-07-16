@@ -89,11 +89,11 @@ if (X_MODE === 'development') {
 
 ### Manifest
 
-You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest – it's right place to do so.
+You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can find related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest – it's right place to do so.
 
 ### Background worker
 
-Background worker doesn't require any configuration and should work out of the box. In dist there is two files `background.js` with actual background worker code and `background-wrapper.js` which just imports common chunks and `background.js`.
+Background worker doesn't require any configuration and should work out of the box. In dist there is will be two files `background.js` with actual background worker code and `background-wrapper.js` which just imports common chunks and `background.js`.
 
 ### Pages
 
@@ -101,15 +101,15 @@ This folder contains scripts each of which will be treated as separate entrypoin
 
 ### Contentscripts
 
-Contentscripts are discovered automatically (just like pages) and compiled into `contentscripts` folder in dist. You, however, need to manually adjust manifest to include your contentscript on pages of site. Don't forget to include common chunks there too (see example for `example.com` site in manifest). **If you added contentscript to manifest, but nothing happens on site (no error) – most likely you forgot to include common chunks.**
+Contentscripts are discovered automatically (just like pages) and compiled into `contentscripts` folder in dist. You, however, need to manually adjust manifest to enable your contentscript for desired web-site. Don't forget to include common chunks there too (see example for `example.com` site in manifest). **If you added contentscript to manifest, but nothing happens on site (no error) – most likely you forgot to include common chunks.**
 
 ### Components and utils
 
-These folders are for shared code. You can organize them in any structure to your liking. Code from `components` will go into `ui` common chunk and code from `utils` into `other` chunks.
+These folders are for shared code. You can organize them in any structure to your liking. Code from `components` will go into `ui` common chunk and code from `utils` into `other` chunk.
 
 ### Assets
 
-Content of this folder will be copied without any processing. However, if you import any file from this folder in you code (page, contentscript or background worker) it will be replaced with call to `chrome.runtime.getURL`, so you can use it in your code. If you need to get asset's content, you can use fetch to load assets from URL. See examples in [`components/AnnoyingPopup/index.tsx`](src/components/AnnoyingPopup/index.tsx).
+Content of this folder will be copied without any processing. However, if you import any file from this folder in your code it will be replaced with call to `chrome.runtime.getURL`, so you can use it in directly as `src` of image for example. If you need to get asset's content, you can use fetch to load assets from URL. See examples in [`components/AnnoyingPopup/index.tsx`](src/components/AnnoyingPopup/index.tsx).
 
 ### Raw imports
 
