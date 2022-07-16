@@ -5,8 +5,6 @@
   Webpack React WebExtension template
 </h1>
 
----
-
 Yes, yet another template. But made with love! And some cool features.
 
 ## Features
@@ -73,7 +71,7 @@ Compile extension:
 yarn dev
 ```
 
-You'll find compiled version in `dist/chrome`. You can now load it into Chrome. That's all. At leas that's minimal example. Let's take a closer look onto different features.
+You'll find compiled version in `dist/chrome`. You can now load it into Chrome. That's all. At leas that's minimal example. Let's take a closer look on other features.
 
 ### Development and production
 
@@ -91,7 +89,7 @@ if (X_MODE === 'development') {
 
 ### Manifest
 
-You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest -- it's right place to do so.
+You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest – it's right place to do so.
 
 ### Background worker
 
