@@ -1,5 +1,5 @@
 <div align="center">
-  ![logo](src/assets/images/icon128.png)   
+  <img src="src/assets/images/icon128.png" />   
 </div>
 <h1 align="center">
   Webpack React WebExtension template
