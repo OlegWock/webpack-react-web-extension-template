@@ -55,6 +55,7 @@ Clone this repository:
 
 ```bash
 git clone git@github.com:OlegWock/webpack-react-web-extension-template.git project-name
+cd project-name
 ```
 
 Change info in `package.json`. You want to change `name`, `description`, `author`, `repository` and other fields.
