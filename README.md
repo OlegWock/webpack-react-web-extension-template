@@ -1,4 +1,11 @@
-# Webpack React WebExtension template
+<div align="center">
+  ![logo](src/assets/images/icon128.png)   
+</div>
+<h1 align="center">
+  Webpack React WebExtension template
+</h1>
+
+---
 
 Yes, yet another template. But made with love! And some cool features.
 
