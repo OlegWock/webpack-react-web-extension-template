@@ -257,6 +257,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
             rules: [
                 {
                     test: /\.(ts|tsx)$/,
+                    resourceQuery: { not: [/raw/] },
                     include: path.resolve(__dirname, paths.src.base),
                     use: [
                         {
@@ -270,6 +271,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 },
                 {
                     test: /\.(js|jsx)$/,
+                    resourceQuery: { not: [/raw/] },
                     include: path.resolve(__dirname, paths.src.base),
                     use: {
                         loader: 'babel-loader',
@@ -278,15 +280,16 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 },
                 {
                     test: /\.s[ac]ss$/i,
+                    resourceQuery: { not: [/raw/] },
                     use: [
                         {
                             loader: 'to-string-loader',
                         },
                         {
-                            loader: 'css-loader', // translates CSS into CommonJS
+                            loader: 'css-loader',
                         },
                         {
-                            loader: 'sass-loader', // compiles SASS/SCSS to CSS
+                            loader: 'sass-loader',
                         },
                     ],
                 },
@@ -303,24 +306,29 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 },
                 // More info: https://github.com/webextension-toolbox/webextension-toolbox/blob/master/src/webpack-config.js#L128
                 // Using 'self' instead of 'window' so it will work in Service Worker context
-                {
-                    test: /webextension-polyfill[\\/]+dist[\\/]+browser-polyfill\.js$/,
-                    loader: require.resolve('string-replace-loader'),
-                    options: {
-                        search: 'typeof browser === "undefined"',
-                        replace:
-                            'typeof self.browser === "undefined" || Object.getPrototypeOf(self.browser) !== Object.prototype',
-                    },
-                },
+                // {
+                // test: /webextension-polyfill[\\/]+dist[\\/]+browser-polyfill\.js$/,
+                // loader: require.resolve('string-replace-loader'),
+                // options: {
+                // search: 'typeof browser === "undefined"',
+                // replace:
+                // 'typeof self.browser === "undefined" || Object.getPrototypeOf(self.browser) !== Object.prototype',
+                // },
+                // },
                 {
                     include: path.resolve(__dirname, paths.src.assets),
                     loader: 'file-loader',
+                    resourceQuery: { not: [/raw/] },
                     options: {
                         name: '[path][name].[ext]',
                         context: paths.src.base,
                         postTransformPublicPath: (publicPath: string) =>
                             `(typeof browser !== 'undefined' ? browser : chrome).runtime.getURL(${publicPath});`,
                     },
+                },
+                {
+                    resourceQuery: /raw/,
+                    type: 'asset/source',
                 },
             ],
         },

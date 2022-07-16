@@ -1,6 +1,8 @@
 .AnnoyingPopup {
     $width: 800px;
     $height: 600px;
+    font-family: 'Nunito', sans-serif;
+    color: #333;
     position: absolute;
     top: calc(50% - $height / 2);
     left: calc(50% - $width / 2);

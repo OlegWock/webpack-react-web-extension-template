@@ -14,7 +14,7 @@ Just create new SASS or SCSS file and import it, no adjustments needed.
 
 ### Easily inject React components on pages
 
-This templates comes wih `inject-react-anywhere` which enables you to easily inject your React componts on 3rd-party sites (includes `styled-components` and `emotion` support)
+This templates comes wih [inject-react-anywhere](https://github.com/OlegWock/inject-react-anywhere) which enables you to easily inject your React componts on 3rd-party sites (includes `styled-components` and `emotion` support)
 
 ### Automatic discovery of entry points
 
@@ -70,7 +70,13 @@ You'll find compiled version in `dist/chrome`. You can now load it into Chrome. 
 
 ### Development and production
 
-There is two commands to compile extension `dev` and `production`. They do mostly same, but slightly adjust webpack config. For example, production version doesn't have any sourcemaps. You can access this value in code using `X_MODE` variable (without any imports).
+There is two commands to compile extension `dev` and `production`. They do mostly same, but slightly adjust webpack config. For example, production version doesn't have any sourcemaps. You can access this value in code using `X_MODE` variable (without any imports). It will be either `development` or `production`.
+
+```javascript
+if (X_MODE === 'development') {
+    // Enable more detailed logging here
+}
+```
 
 ### Watch
 
@@ -94,12 +100,54 @@ Contentscripts are discovered automatically (just like pages) and compiled into 
 
 ### Components and utils
 
-These folders are for shared code. You can organize them in any structure to your liking. Code from `components` will go into UI common chunk and code from `utils` into `other` chunks.
+These folders are for shared code. You can organize them in any structure to your liking. Code from `components` will go into `ui` common chunk and code from `utils` into `other` chunks.
 
 ### Assets
 
-Content of this folder will be copied without any processing. However, if you import any file from this folder in you code (page, contentscript or background worker) it will be replaced with call to `chrome.runtime.getURL`, so you can use it in your code, see example in `components/AnnoyingPopup/index.tsx`.
+Content of this folder will be copied without any processing. However, if you import any file from this folder in you code (page, contentscript or background worker) it will be replaced with call to `chrome.runtime.getURL`, so you can use it in your code. If you need to get asset's content, you can use fetch to load assets from URL. See examples in [`components/AnnoyingPopup/index.tsx`](src/components/AnnoyingPopup/index.tsx).
+
+### Raw imports
+
+It's possible to import content of any file directly, without any processing. This way content will be emedded directly into `other` common chunk. Just add `?raw` to any import and
+
+```js
+import txtContent from '@assets/test.txt?raw';
+```
+
+### Import aliases
+
+There is three import aliases out of the box (but you can add your own): `@assets`, `@components` and `@utils`. They used to avoid cluttered imports like this
+
+```js
+import smth from '../../../../../utils/smth';
+
+// Instead you now can do something like
+import smth from '@utils/smth';
+```
+
+If you want to add your own alias, you need to include it in `webpack.config.ts` (used by webpack for JS files), look for `alias` keyword and in `tsconfig.json` (used by TS and your code editor), look for `paths` field.
+
+### webextension-polyfill
+
+`webextension-polyfill` provides convenient wrapper for `chrome.*` API which uses promises instead of callbacks. This in turn allows you to utilize power of async/await and write elegant async code instead of callbacks hell.
+
+```js
+import browser from 'webextension-polyfill';
+
+const main = async () => {
+    await browser.storage.local.set({ test: 11 });
+    console.log('Storage updated');
+};
+
+main();
+```
 
 ### Prettier and eslint
 
 Run `yarn format` to format files with Prettier and `yarn lint` to lint them using ESLint.
+
+## Adjustments
+
+### I don't need options/popup page
+
+Just remove its folder in `src/pages` and remove it from manifest in webpack config.
