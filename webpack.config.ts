@@ -339,8 +339,8 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 cleanOnceBeforeBuildPatterns: ['**/*'],
             }),
             new webpack.DefinePlugin({
-                X_MODE: mode,
-                X_BROWSER: targetBrowser,
+                X_MODE: JSON.stringify(mode),
+                X_BROWSER: JSON.stringify(targetBrowser),
             }),
             ...generateFileInvocations,
 
