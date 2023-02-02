@@ -286,6 +286,9 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                         },
                         {
                             loader: 'css-loader',
+                            options: {
+                                url: false,
+                            },
                         },
                         {
                             loader: 'sass-loader',
@@ -300,6 +303,9 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                         },
                         {
                             loader: 'css-loader',
+                            options: {
+                                url: false,
+                            },
                         },
                     ],
                 },
