@@ -21,7 +21,7 @@ import {
     CacheGroup,
     scriptExtensions,
 } from './build_helpers/webpack-utils';
-
+import type { Manifest } from 'webextension-polyfill';
 import { version, name, description, author } from './package.json';
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -80,7 +80,6 @@ const generateManifest = (
                 ],
             },
         ],
-
         web_accessible_resources: [
             {
                 resources: ['/assets/*'],
@@ -88,7 +87,7 @@ const generateManifest = (
                 use_dynamic_url: true,
             },
         ],
-    };
+    } satisfies Manifest.WebExtensionManifest;
 };
 
 const baseSrc = './src';
