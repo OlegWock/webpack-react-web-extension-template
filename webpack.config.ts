@@ -157,7 +157,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 content: generatePageContentForScript(pageTemplate, {
                     scripts: scriptsToInject
                         .map((url) => {
-                            return `<script src="${url}"></script>`;
+                            return `<script src="${url}" async></script>`;
                         })
                         .join('\n'),
                 }),
