@@ -9,20 +9,17 @@ import * as CopyPlugin from 'copy-webpack-plugin';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import * as FileManagerPlugin from 'filemanager-webpack-plugin';
 import {
-    Chunk,
     createPathsObject,
     joinPath,
     scriptName,
-    shouldNotBeInCommonChunk,
-    pathRelatedToExtRoot,
     generatePageContentForScript,
-    generateBackgroundWorkerWrapper,
-    isUiRelated,
-    CacheGroup,
     scriptExtensions,
 } from './build_helpers/webpack-utils';
+import WebExtensionChuckLoaderRuntimePlugin from './build_helpers/dynamic_import_plugin/ChunkLoader';
+import ServiceWorkerEntryPlugin from './build_helpers/dynamic_import_plugin/ServiceWorkerPlugin';
 import type { Manifest } from 'webextension-polyfill';
 import { version, name, description, author } from './package.json';
+
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
@@ -35,8 +32,7 @@ interface WebpackEnvs {
 const generateManifest = (
     mode: Exclude<WebpackEnvs['mode'], undefined>,
     targetBrowser: Exclude<WebpackEnvs['targetBrowser'], undefined>,
-    libsRoot: string,
-    commonChunks: { [name: string]: Chunk }
+    paths: ReturnType<typeof createPathsObject>,
 ) => {
     return {
         name: name,
@@ -45,7 +41,7 @@ const generateManifest = (
         author: author,
         manifest_version: 3,
         background: {
-            service_worker: 'background-wrapper.js',
+            service_worker: 'background.js',
         },
         icons: {
             '16': 'assets/images/icon16.png',
@@ -75,14 +71,18 @@ const generateManifest = (
             {
                 matches: ['*://*.example.com/*'],
                 js: [
-                    ...Object.keys(commonChunks).map((name) => `${libsRoot}/${name}.js`),
                     '/contentscripts/example.js',
                 ],
             },
         ],
         web_accessible_resources: [
             {
-                resources: ['/assets/*'],
+                resources: [`/${paths.dist.assets}/*`],
+                matches: ['<all_urls>'],
+                use_dynamic_url: true,
+            },
+            {
+                resources: [`/${paths.dist.chunks}/*`],
                 matches: ['<all_urls>'],
                 use_dynamic_url: true,
             },
@@ -94,29 +94,6 @@ const baseSrc = './src';
 const baseDist = './dist';
 
 const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
-    const commonChunks: { [name: string]: Chunk } = {
-        ui: {
-            test: (module, context) => {
-                const name = module.nameForCondition();
-                if (!name) return false;
-                const absBase = path.resolve(__dirname);
-                const relativePath = name.replace(absBase, '.').toLowerCase();
-                if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
-                return isUiRelated(relativePath);
-            },
-        },
-        other: {
-            test: (module, context) => {
-                const name = module.nameForCondition();
-                if (!name) return false;
-                const absBase = path.resolve(__dirname);
-                const relativePath = name.replace(absBase, '.').toLowerCase();
-                if (shouldNotBeInCommonChunk(relativePath, entries)) return false;
-                return !isUiRelated(relativePath);
-            },
-        },
-    } as const;
-
     const { mode = 'development', targetBrowser = 'chrome', WEBPACK_WATCH } = env;
 
     const paths = createPathsObject(baseSrc, joinPath(baseDist, targetBrowser));
@@ -132,8 +109,6 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         backgroundScript: paths.dist.background,
     };
 
-    const libsRoot = pathRelatedToExtRoot(paths, 'libs');
-
     const generateFileInvocations: GenerateFiles[] = [];
 
     const pages = walkSync(paths.src.pages, {
@@ -147,7 +122,6 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         outputs[cleanName] = joinPath(paths.dist.pages, cleanName + '.js');
 
         const scriptsToInject = [
-            ...Object.keys(commonChunks).map((name) => `${libsRoot}/${name}.js`),
             `/${paths.dist.pages}/${cleanName}.js`,
         ];
 
@@ -177,19 +151,6 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         outputs[cleanName] = joinPath(paths.dist.contentscripts, cleanName + '.js');
     });
 
-    const cacheGroups: { [name: string]: CacheGroup } = {};
-    Object.entries(commonChunks).forEach(([name, entry]) => {
-        cacheGroups[name] = {
-            ...entry,
-            name: name,
-            priority: 10,
-            filename: joinPath(paths.dist.libs, `${name}.js`),
-            chunks: 'all',
-            reuseExistingChunk: false,
-            enforce: true,
-        };
-    });
-
     // @ts-expect-error There is some issue with types provided with FileManagerPlugin and CJS/ESM imports
     let zipPlugin: FileManagerPlugin[] = [];
     if (!WEBPACK_WATCH) {
@@ -212,7 +173,13 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
 
     const babelOptions = {
         presets: [
-            ['@babel/preset-env', {}],
+            ['@babel/preset-env', {
+                targets: {
+                    chrome: 90,
+                    firefox: 90,
+                    safari: 14,
+                }
+            }],
             [
                 '@babel/preset-react',
                 {
@@ -239,17 +206,25 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
 
         entry: entries,
         output: {
-            filename: (pathData) => {
-                if (!pathData.chunk?.name) {
-                    throw new Error(
-                        'Unexpected chunk. Please make sure that all source files belong to ' +
-                            'one of predefined chunks or are entrypoints'
-                    );
+            filename: (pathData, assetInfo) => {
+                if (!pathData.chunk) {
+                    throw new Error('pathData.chunk not defined for some reason');
                 }
-                return outputs[pathData.chunk.name];
+
+                const predefinedName = outputs[pathData.chunk.name || ''];
+                if (predefinedName) return predefinedName;
+                const filename = (pathData.chunk.name || pathData.chunk.id) + '.js';
+                return path.join(paths.dist.chunks, filename);
             },
+            chunkFilename: `${paths.dist.chunks}/[id].js`,
+            chunkFormat: 'array-push',
+            chunkLoadTimeout: 5000,
+            chunkLoading: 'jsonp',
             path: path.resolve(__dirname, paths.dist.base),
             publicPath: '/',
+            environment: {
+                dynamicImport: true,
+            }
         },
 
         module: {
@@ -309,17 +284,6 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                         },
                     ],
                 },
-                // More info: https://github.com/webextension-toolbox/webextension-toolbox/blob/master/src/webpack-config.js#L128
-                // Using 'self' instead of 'window' so it will work in Service Worker context
-                // {
-                // test: /webextension-polyfill[\\/]+dist[\\/]+browser-polyfill\.js$/,
-                // loader: require.resolve('string-replace-loader'),
-                // options: {
-                // search: 'typeof browser === "undefined"',
-                // replace:
-                // 'typeof self.browser === "undefined" || Object.getPrototypeOf(self.browser) !== Object.prototype',
-                // },
-                // },
                 {
                     include: path.resolve(__dirname, paths.src.assets),
                     loader: 'file-loader',
@@ -327,8 +291,6 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                     options: {
                         name: '[path][name].[ext]',
                         context: paths.src.base,
-                        postTransformPublicPath: (publicPath: string) =>
-                            `(typeof browser !== 'undefined' ? browser : chrome).runtime.getURL(${publicPath});`,
                     },
                 },
                 {
@@ -348,16 +310,15 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 X_MODE: JSON.stringify(mode),
                 X_BROWSER: JSON.stringify(targetBrowser),
             }),
+
+            new WebExtensionChuckLoaderRuntimePlugin({}),
+            new ServiceWorkerEntryPlugin({}, 'backgroundScript'),
+
             ...generateFileInvocations,
 
-            // We use wrapper to load common chunks before main script
-            new GenerateFiles({
-                file: 'background-wrapper.js',
-                content: generateBackgroundWorkerWrapper([`${libsRoot}/other.js`, `background.js`]),
-            }),
             new GenerateFiles({
                 file: paths.dist.manifest,
-                content: JSON.stringify(generateManifest(mode, targetBrowser, libsRoot, commonChunks), null, 4),
+                content: JSON.stringify(generateManifest(mode, targetBrowser, paths), null, 4),
             }),
             // Part of files will be already copied by browser-runtime-geturl-loader, but not all (if you don't
             // import asset in code, it's not copied), so we need to do this with addiitonal plugin
@@ -399,7 +360,8 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
 
             splitChunks: {
                 chunks: 'all',
-                cacheGroups,
+                automaticNameDelimiter: '-',
+                minChunks: 2,
             },
         },
     };

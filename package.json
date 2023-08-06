@@ -11,9 +11,7 @@
         "watch": "webpack watch --config webpack.config.ts",
         "prepare": "husky install",
         "lint": "eslint .",
-        "format:check": "prettier --check .",
-        "format": "prettier --write .",
-        "pre-commit": "run-p format:check lint"
+        "pre-commit": "run-p lint"
     },
     "browserslist": ">0.25% and Chrome > 80",
     "dependencies": {
@@ -26,6 +24,7 @@
         "@types/webextension-polyfill": "^0.10.0",
         "@typescript-eslint/eslint-plugin": "^5.50.0",
         "@typescript-eslint/parser": "^5.50.0",
+        "@typescript-eslint/typescript-estree": "^6.2.1",
         "babel-loader": "^8.2.5",
         "clean-webpack-plugin": "^4.0.0",
         "copy-webpack-plugin": "^11.0.0",
@@ -43,7 +42,7 @@
         "to-string-loader": "^1.2.0",
         "ts-loader": "^9.4.2",
         "ts-node": "^10.9.1",
-        "typescript": "^4.9.5",
+        "typescript": "^5.1.6",
         "walk-sync": "^3.0.0",
         "webextension-polyfill": "^0.10.0",
         "webpack": "^5.75.0",
@@ -51,9 +50,7 @@
     },
     "devDependencies": {
         "eslint": "^8.33.0",
-        "eslint-config-prettier": "^8.6.0",
         "husky": "^8.0.3",
-        "npm-run-all": "^4.1.5",
-        "prettier": "^2.8.3"
+        "npm-run-all": "^4.1.5"
     }
 }
