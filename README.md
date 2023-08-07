@@ -13,6 +13,18 @@ Yes, yet another template. But made with love! And some cool features.
 
 TypeScript automatically compiled into JS and then processed by babel.
 
+### Automatic optimization of shared dependencies
+
+Webpack will automatically extract any dependencies shared by 2 or more entry points (i.e. pages, contentscript or background page/worker) into separate file instead of including it with each entrypoint. Those files are loaded automatically, so you don't need to include them in your manifest (but you `chunks` folder should be in `web_accessible_resources`).
+
+### Support for dynamic imports
+
+Dynamic imports work out of the box for pages, contentscripts and background page/worker. This allows posponing loading and parsing some code to time when you actually need it:
+
+```ts
+import('@utils/bigModule').then(module => module.lazyFunction());
+```
+
 ### SCSS/SASS support
 
 Just create new SASS or SCSS file and import it, no adjustments needed.
@@ -45,7 +57,7 @@ const Popup = () => {
 };
 ```
 
-### Eslint, prettier and git hook
+### Eslint and git hook
 
 Do not let bad code slip into repo!
 
@@ -90,11 +102,11 @@ if (X_MODE === 'development') {
 
 ### Manifest
 
-You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can find related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest – it's right place to do so.
+You might noticed that there is no manifest.json in source files. Manifes in generated on the fly by Webpack. You can find related code in `webpack.config.ts` in `generateManifest` function. When you need to put any changes to manifest – it's right place to do so. Note: if you're runing webpack in watch mode, you'll need to restart it after making changes to manifest.
 
 ### Background worker
 
-Background worker doesn't require any configuration and should work out of the box. In dist there is will be two files `background.js` with actual background worker code and `background-wrapper.js` which just imports common chunks and `background.js`.
+Background worker doesn't require any configuration and should work out of the box.
 
 ### Pages
 
@@ -102,19 +114,19 @@ This folder contains scripts each of which will be treated as separate entrypoin
 
 ### Contentscripts
 
-Contentscripts are discovered automatically (just like pages) and compiled into `contentscripts` folder in dist. You, however, need to manually adjust manifest to enable your contentscript for desired web-site. Don't forget to include common chunks there too (see example for `example.com` site in manifest). **If you added contentscript to manifest, but nothing happens on site (no error) – most likely you forgot to include common chunks.**
+Contentscripts are discovered automatically (just like pages) and compiled into `contentscripts` folder in dist. You, however, need to manually adjust manifest to enable your contentscript for desired web-site.
 
 ### Components and utils
 
-These folders are for shared code. You can organize them in any structure to your liking. Code from `components` will go into `ui` common chunk and code from `utils` into `other` chunk.
+These folders are for shared code. You can organize them in any structure to your liking.
 
 ### Assets
 
-Content of this folder will be copied without any processing. However, if you import any file from this folder in your code it will be replaced with call to `chrome.runtime.getURL`, so you can use it in directly as `src` of image for example. If you need to get asset's content, you can use fetch to load assets from URL. See examples in [`components/AnnoyingPopup/index.tsx`](src/components/AnnoyingPopup/index.tsx).
+Content of this folder will be copied without any processing. However, if you import any file from this folder in your code it will be replaced with call to `chrome.runtime.getURL`, so you can use it directly as `src` of image for example. If you need to get asset's content, you can use fetch to load assets from URL. See examples in [`components/AnnoyingPopup/index.tsx`](src/components/AnnoyingPopup/index.tsx).
 
 ### Raw imports
 
-It's possible to import content of any file directly, without any processing. This way content will be emedded directly into `other` common chunk. Just add `?raw` to any import and
+It's possible to import content of any file directly, without any processing. This way content will be emedded directly into javascript file. Just add `?raw` to any import and
 
 ```js
 import txtContent from '@assets/test.txt?raw';
@@ -148,9 +160,9 @@ const main = async () => {
 main();
 ```
 
-### Prettier and eslint
+### ESLint
 
-Run `yarn format` to format files with Prettier and `yarn lint` to lint them using ESLint.
+Run `yarn lint` to lint them using ESLint.
 
 ## Adjustments
 

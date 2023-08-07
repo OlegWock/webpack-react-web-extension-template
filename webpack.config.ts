@@ -311,15 +311,17 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                 X_BROWSER: JSON.stringify(targetBrowser),
             }),
 
-            new WebExtensionChuckLoaderRuntimePlugin({}),
-            new ServiceWorkerEntryPlugin({}, 'backgroundScript'),
+            new WebExtensionChuckLoaderRuntimePlugin({backgroundWorkerEntry: targetBrowser === 'chrome' ? 'backgroundScript' : undefined}),
+            ...(targetBrowser === 'chrome' ? [new ServiceWorkerEntryPlugin({}, 'backgroundScript')] : []),
 
+            // TODO: would be great to generate manifest after chunks are compiled and add initial chunks for each
+            // entrypoint directly to manifest to allow them to be loaded and parsed in paralel. Same for generated pages
             ...generateFileInvocations,
-
             new GenerateFiles({
                 file: paths.dist.manifest,
                 content: JSON.stringify(generateManifest(mode, targetBrowser, paths), null, 4),
             }),
+
             // Part of files will be already copied by browser-runtime-geturl-loader, but not all (if you don't
             // import asset in code, it's not copied), so we need to do this with addiitonal plugin
             new CopyPlugin({

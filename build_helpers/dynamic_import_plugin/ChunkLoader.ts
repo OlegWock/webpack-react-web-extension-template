@@ -4,7 +4,9 @@ import AutoPublicPathRuntimeModule from './RuntimeModules/AutoPublicPath';
 import EagerlyLoadChunksRuntimeModule from './RuntimeModules/EagerlyLoadChunks';
 import { Compiler, Compilation } from 'webpack';
 
-export type WebExtImportPluginOptions = {};
+export type WebExtImportPluginOptions = {
+    backgroundWorkerEntry?: string,
+};
 type MapValue<T> = T extends Map<any, infer R> ? R : never;
 type Entrypoint = MapValue<Compilation["entrypoints"]>;
 type Chunkgroup = ReturnType<MapValue<Compilation["entrypoints"]>["getChildren"]>[number];
@@ -63,9 +65,11 @@ export default class WebExtensionChuckLoaderRuntimePlugin {
 
             compilation.hooks.afterOptimizeChunkIds.tap(WebExtensionChuckLoaderRuntimePlugin.name, () => {
                 compilation.entrypoints.forEach(entryPoint => {
-                    console.log('Processing entry point', entryPoint.name);
-
-                    const children = entryPoint.getChildren();
+                    // console.log('Processing entry point', {id: entryPoint.id, name: entryPoint.name});
+                    if (this.options.backgroundWorkerEntry && this.options.backgroundWorkerEntry === entryPoint.name) {
+                        // Background worker will be handled by ServiceWorkerEntryPlugin plugin
+                        return;
+                    }
                     const visitedChunkGroups = new Set()
                     const initialChunks = new Set(entryPoint.chunks)
                     collectAllChildren(entryPoint);

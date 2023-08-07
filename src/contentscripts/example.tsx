@@ -2,6 +2,7 @@ import { AnnoyingPopup } from '@components/AnnoyingPopup';
 import txtEmbedded from '@assets/test.txt?raw';
 import { loadTextAsset } from '@utils/network';
 import { injectComponent } from 'inject-react-anywhere';
+import browser from 'webextension-polyfill';
 import v18 from 'inject-react-anywhere/v18';
 import txt from '@assets/test.txt';
 
@@ -30,3 +31,4 @@ const main = async () => {
 };
 
 main();
+console.log('Hello from extension script', browser.runtime.id);
