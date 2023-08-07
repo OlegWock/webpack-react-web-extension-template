@@ -63,6 +63,13 @@ export default class WebExtensionChuckLoaderRuntimePlugin {
                     return true;
                 });
 
+            compilation.hooks.runtimeRequirementInTree
+                .for(RuntimeGlobals.require)
+                .tap(WebExtensionChuckLoaderRuntimePlugin.name, (chunk, set) => {
+                    set.add(RuntimeGlobals.ensureChunkHandlers);
+                    set.add(RuntimeGlobals.ensureChunkIncludeEntries);
+                });
+
             compilation.hooks.afterOptimizeChunkIds.tap(WebExtensionChuckLoaderRuntimePlugin.name, () => {
                 compilation.entrypoints.forEach(entryPoint => {
                     // console.log('Processing entry point', {id: entryPoint.id, name: entryPoint.name});
