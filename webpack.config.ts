@@ -4,7 +4,6 @@ import * as walkSync from 'walk-sync';
 import * as webpack from 'webpack';
 import * as TerserPlugin from 'terser-webpack-plugin';
 // @ts-ignore No declarations for this module!
-import * as GenerateFiles from 'generate-file-webpack-plugin';
 import * as CopyPlugin from 'copy-webpack-plugin';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import * as FileManagerPlugin from 'filemanager-webpack-plugin';
@@ -17,6 +16,7 @@ import {
 } from './build_helpers/webpack-utils';
 import WebExtensionChuckLoaderRuntimePlugin from './build_helpers/dynamic_import_plugin/ChunkLoader';
 import ServiceWorkerEntryPlugin from './build_helpers/dynamic_import_plugin/ServiceWorkerPlugin';
+import { GenerateFilePlugin } from './build_helpers/GenerateFilePlugin';
 import type { Manifest } from 'webextension-polyfill';
 import { version, name, description, author } from './package.json';
 
@@ -33,8 +33,8 @@ const generateManifest = (
     mode: Exclude<WebpackEnvs['mode'], undefined>,
     targetBrowser: Exclude<WebpackEnvs['targetBrowser'], undefined>,
     paths: ReturnType<typeof createPathsObject>,
-) => {
-    return {
+) => (getFilesForEntrypoint: (name: string) => string[]) => {
+    const manifest = {
         name: name,
         description: description,
         version: version,
@@ -88,6 +88,8 @@ const generateManifest = (
             },
         ],
     } satisfies Manifest.WebExtensionManifest;
+
+    return JSON.stringify(manifest, null, 4);
 };
 
 const baseSrc = './src';
@@ -109,7 +111,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         backgroundScript: paths.dist.background,
     };
 
-    const generateFileInvocations: GenerateFiles[] = [];
+    const generateFileInvocations: GenerateFilePlugin[] = [];
 
     const pages = walkSync(paths.src.pages, {
         globs: scriptExtensions.map((ext) => '**/*' + ext),
@@ -121,20 +123,18 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
         entries[cleanName] = joinPath(paths.src.pages, page);
         outputs[cleanName] = joinPath(paths.dist.pages, cleanName + '.js');
 
-        const scriptsToInject = [
-            `/${paths.dist.pages}/${cleanName}.js`,
-        ];
-
         generateFileInvocations.push(
-            new GenerateFiles({
-                file: joinPath(paths.dist.pages, `${cleanName}.html`),
-                content: generatePageContentForScript(pageTemplate, {
-                    scripts: scriptsToInject
-                        .map((url) => {
-                            return `<script src="${url}" async></script>`;
-                        })
-                        .join('\n'),
-                }),
+            new GenerateFilePlugin({
+                outPath: joinPath(paths.dist.pages, `${cleanName}.html`),
+                generate(getFilesForEntrypoint) {
+                    return generatePageContentForScript(pageTemplate, {
+                        scripts: getFilesForEntrypoint(cleanName)
+                            .map((url) => {
+                                return `<script src="/${url}" async></script>`;
+                            })
+                            .join('\n'),
+                    });
+                },
             })
         );
     });
@@ -317,9 +317,9 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
             // TODO: would be great to generate manifest after chunks are compiled and add initial chunks for each
             // entrypoint directly to manifest to allow them to be loaded and parsed in paralel. Same for generated pages
             ...generateFileInvocations,
-            new GenerateFiles({
-                file: paths.dist.manifest,
-                content: JSON.stringify(generateManifest(mode, targetBrowser, paths), null, 4),
+            new GenerateFilePlugin({
+                outPath: paths.dist.manifest,
+                generate: generateManifest(mode, targetBrowser, paths)
             }),
 
             // Part of files will be already copied by browser-runtime-geturl-loader, but not all (if you don't
