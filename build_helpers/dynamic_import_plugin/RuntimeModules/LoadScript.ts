@@ -34,7 +34,7 @@ export default function LoadScriptRuntimeModule(webpack: typeof _webpack, suppor
             const DynamicImportLoader =
                 `var ${DYNAMIC_IMPORT_LOADER} = ` +
                 this.f('url, done, chunkId', [
-                    `import(url).then(() => done(), ${this.f('e', [
+                    `import(runtime.runtime.getURL(url)).then(() => done(), ${this.f('e', [
                         `console.warn('jsonp chunk loader failed to use dynamic import.', e)`,
                         `${FALLBACK_LOADER}(url, done, chunkId)`,
                     ])})`,
@@ -43,14 +43,14 @@ export default function LoadScriptRuntimeModule(webpack: typeof _webpack, suppor
                 `var ${DOM_LOADER} = ` +
                 this.f('url, done, chunkId', [
                     `var script = document.createElement('script')`,
-                    `script.src = url`,
+                    `script.src = runtime.runtime.getURL(url)`,
                     `script.onload = done`,
                     `script.onerror = done`,
                     `document.body.appendChild(script)`,
                 ])
             const WorkerLoader =
                 `var ${WORKER_LOADER} = ` +
-                this.f('url, done, chunkId', [`try { importScripts(url); done() } catch (e) { done(e) }`])
+                this.f('url, done, chunkId', [`try { importScripts(runtime.runtime.getURL(url)); done() } catch (e) { done(e) }`])
 
             const ClassicLoaderDisabled =
                 `var ${CLASSIC_LOADER} = ` +

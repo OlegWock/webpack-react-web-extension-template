@@ -27,7 +27,7 @@ export default function PublicPathRuntimeModule(webpack: typeof _webpack, accept
                         hash: compilation.hash || 'XXXX',
                     })
                 )}`,
-                `${RuntimeGlobals.publicPath} = typeof importScripts === 'function' ? path : runtime.runtime.getURL(path);`,
+                `${RuntimeGlobals.publicPath} = path`,
             ])
         }
     }

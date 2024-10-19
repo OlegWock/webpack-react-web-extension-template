@@ -79,12 +79,14 @@ const generateManifest = (
             {
                 resources: [`/${paths.dist.assets}/*`],
                 matches: ['<all_urls>'],
-                use_dynamic_url: true,
+                use_dynamic_url: false,
             },
             {
                 resources: [`/${paths.dist.chunks}/*`],
                 matches: ['<all_urls>'],
-                use_dynamic_url: true,
+                // We'd prefer to use dynamic urls, but it's not currenly possible because of bug in Chrome 130+
+                // https://issues.chromium.org/issues/363027634
+                use_dynamic_url: false,
             },
         ],
     } satisfies Manifest.WebExtensionManifest;
@@ -291,6 +293,7 @@ const config = async (env: WebpackEnvs): Promise<webpack.Configuration> => {
                     options: {
                         name: '[path][name].[ext]',
                         context: paths.src.base,
+                        postTransformPublicPath: (p: string) => `(typeof browser !== 'undefined' ? browser : chrome).runtime.getURL(${p})`
                     },
                 },
                 {
